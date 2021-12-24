@@ -231,12 +231,90 @@ public class ScenesTfLiteClassifier extends TfLiteClassifier{
                 }
             }
         }
-        //String ethnicity = ethnicities[bestInd+1];
+        String ethnicity = ethnicities[bestInd+1];
 
         TreeMap<String,Float> scene2Score=new TreeMap<>();
-        scene2Score.put("age",(float)age);
-        scene2Score.put("gender",gender);
-        scene2Score.put("ethnicity",(float)bestInd+1);
+        if (bestInd == 0) {
+            scene2Score.put("white", (float)1);
+            scene2Score.put("black", (float)0);
+            scene2Score.put("asian", (float)0);
+            scene2Score.put("indian", (float)0);
+            scene2Score.put("latino", (float)0);
+            scene2Score.put("none", (float)0);
+        }
+        else if (bestInd == 1) {
+            scene2Score.put("white", (float)0);
+            scene2Score.put("black", (float)1);
+            scene2Score.put("asian", (float)0);
+            scene2Score.put("indian", (float)0);
+            scene2Score.put("latino", (float)0);
+            scene2Score.put("none", (float)0);
+        }
+        else if (bestInd == 2) {
+            scene2Score.put("white", (float)0);
+            scene2Score.put("black", (float)0);
+            scene2Score.put("asian", (float)1);
+            scene2Score.put("indian", (float)0);
+            scene2Score.put("latino", (float)0);
+            scene2Score.put("none", (float)0);
+        }
+        else if (bestInd == 3) {
+            scene2Score.put("white", (float)0);
+            scene2Score.put("black", (float)0);
+            scene2Score.put("asian", (float)0);
+            scene2Score.put("indian", (float)1);
+            scene2Score.put("latino", (float)0);
+            scene2Score.put("none", (float)0);
+        }
+        else if (bestInd == 4) {
+            scene2Score.put("white", (float)0);
+            scene2Score.put("black", (float)0);
+            scene2Score.put("asian", (float)0);
+            scene2Score.put("indian", (float)0);
+            scene2Score.put("latino", (float)1);
+            scene2Score.put("none", (float)0);
+        }
+        else {
+            scene2Score.put("white", (float)0);
+            scene2Score.put("black", (float)0);
+            scene2Score.put("asian", (float)0);
+            scene2Score.put("indian", (float)0);
+            scene2Score.put("latino", (float)0);
+            scene2Score.put("none", (float)1);
+        }
+
+//        scene2Score.put("age", Integer.toString((int)age));
+//        scene2Score.put("gender", gender_str);
+//        scene2Score.put("ethnicity", ethnicity);
+        //scene2Score.put("age", (float)age);
+        //scene2Score.put("gender", gender);
+
+        if (gender > 0.6) {
+            scene2Score.put("female", (float)0);
+            scene2Score.put("male", gender);
+        }
+        else {
+            scene2Score.put("female", gender);
+            scene2Score.put("male", (float)0);
+        }
+
+        //scene2Score.put("ethnicity", (float)bestInd+1);
+
+        if (age < 20.0) {
+            scene2Score.put("young", (float)age);
+            scene2Score.put("middle_age", (float)0.0);
+            scene2Score.put("old", (float)0.0);
+        }
+        else if (age < 50.0) {
+            scene2Score.put("young", (float)0.0);
+            scene2Score.put("middle_age", (float)age);
+            scene2Score.put("old", (float)0.0);
+        }
+        else if (age >= 50.0) {
+            scene2Score.put("young", (float)0.0);
+            scene2Score.put("middle_age", (float)age);
+            scene2Score.put("old", (float)1.0);
+        }
 
         TreeMap<String,Float> event2Score=null;
 

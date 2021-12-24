@@ -1,3 +1,11 @@
-age=0
-gender=1
-ethnicity=2
+female=0
+male=0
+young=0
+middle_age=0
+old=0
+white=0
+black=0
+asian=0
+indian=0
+latino=0
+none=0

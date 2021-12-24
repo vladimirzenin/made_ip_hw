@@ -12,7 +12,6 @@ import android.os.SystemClock;
 import android.util.Log;
 
 import com.asav.android.db.ClassifierResult;
-import com.asav.android.mtcnn.Box;
 
 import org.tensorflow.lite.Interpreter;
 import org.tensorflow.lite.gpu.CompatibilityList;
@@ -29,6 +28,9 @@ import java.nio.channels.FileChannel;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
+
+import com.asav.android.mtcnn.Box;
+import com.asav.android.mtcnn.MTCNNModel;
 
 /**
  * Created by avsavchenko.
@@ -48,8 +50,17 @@ public abstract class TfLiteClassifier {
     private int imageSizeX=224,imageSizeY=224;
     private float[][][] outputs;
     Map<Integer, Object> outputMap = new HashMap<>();
+    private MTCNNModel mtcnnFaceDetector=null;
+    private static int minFaceSize=40;
 
     public TfLiteClassifier(final Context context, String model_path) throws IOException {
+
+        try {
+            mtcnnFaceDetector =MTCNNModel.Companion.create(context.getAssets());
+        } catch (final Exception e) {
+            Log.e(TAG, "Exception initializing MTCNNModel!"+e);
+        }
+
         Interpreter.Options options = (new Interpreter.Options()).setNumThreads(4);//.addDelegate(delegate);
         CompatibilityList compatList = new CompatibilityList();
         boolean hasGPU=compatList.isDelegateSupportedOnThisDevice();
@@ -86,12 +97,10 @@ public abstract class TfLiteClassifier {
 
 
     /** Classifies a frame from the preview stream. */
-    public ClassifierResult classifyFrame(Bitmap bitmap) {
+    public ClassifierResult classifyFrame(Bitmap bmp) {
         Object[] inputs={null};
 
-
-
-        Bitmap bmp = bitmap;
+        //Bitmap bmp = bitmap;
 
         Bitmap resizedBitmap=bmp;
         double minSize=600.0;
@@ -104,35 +113,41 @@ public abstract class TfLiteClassifier {
         Vector<Box> bboxes = mtcnnFaceDetector.detectFaces(resizedBitmap, minFaceSize);//(int)(bmp.getWidth()*MIN_FACE_SIZE));
         Log.i(TAG, "Timecost to run mtcnn: " + Long.toString(SystemClock.uptimeMillis() - startTime));
 
-        Bitmap tempBmp = Bitmap.createBitmap(bmp.getWidth(), bmp.getHeight(), Bitmap.Config.ARGB_8888);
-        Canvas c = new Canvas(tempBmp);
-        Paint p = new Paint();
-        p.setStyle(Paint.Style.STROKE);
-        p.setAntiAlias(true);
-        p.setFilterBitmap(true);
-        p.setDither(true);
-        p.setColor(Color.BLUE);
-        p.setStrokeWidth(5);
-
-        Paint p_text = new Paint();
-        p_text.setColor(Color.WHITE);
-        p_text.setStyle(Paint.Style.FILL);
-        p_text.setColor(Color.GREEN);
-        p_text.setTextSize(24);
-
-        c.drawBitmap(bmp, 0, 0, null);
+//        Bitmap tempBmp = Bitmap.createBitmap(bmp.getWidth(), bmp.getHeight(), Bitmap.Config.ARGB_8888);
+//        Canvas c = new Canvas(tempBmp);
+//        Paint p = new Paint();
+//        p.setStyle(Paint.Style.STROKE);
+//        p.setAntiAlias(true);
+//        p.setFilterBitmap(true);
+//        p.setDither(true);
+//        p.setColor(Color.BLUE);
+//        p.setStrokeWidth(5);
+//
+//        Paint p_text = new Paint();
+//        p_text.setColor(Color.WHITE);
+//        p_text.setStyle(Paint.Style.FILL);
+//        p_text.setColor(Color.GREEN);
+//        p_text.setTextSize(24);
+//
+//        c.drawBitmap(bmp, 0, 0, null);
 
         //for (Box box : bboxes) {
 
+        for (Box box : bboxes) {
 
+            android.graphics.Rect bbox = new android.graphics.Rect(Math.max(0, bmp.getWidth() * box.left() / resizedBitmap.getWidth()),
+                    Math.max(0, bmp.getHeight() * box.top() / resizedBitmap.getHeight()),
+                    bmp.getWidth() * box.right() / resizedBitmap.getWidth(),
+                    bmp.getHeight() * box.bottom() / resizedBitmap.getHeight()
+            );
 
+            Bitmap faceBitmap = Bitmap.createBitmap(bmp, bbox.left, bbox.top, bbox.width(), bbox.height());
+            bmp = Bitmap.createScaledBitmap(faceBitmap, imageSizeX, imageSizeY, false);
 
+            break; // Будем обрабатывать 1 лицо на фото.
+        }
 
-
-
-
-
-        bitmap.getPixels(intValues, 0, bitmap.getWidth(), 0, 0, bitmap.getWidth(), bitmap.getHeight());
+        bmp.getPixels(intValues, 0, bmp.getWidth(), 0, 0, bmp.getWidth(), bmp.getHeight());
         if (imgData == null) {
             return null;
         }
@@ -146,7 +161,7 @@ public abstract class TfLiteClassifier {
             }
         }
         inputs[0] = imgData;
-        long startTime = SystemClock.uptimeMillis();
+        //long startTime = SystemClock.uptimeMillis();
         tflite.runForMultipleInputsOutputs(inputs, outputMap);
         for(int i = 0; i< outputs.length; ++i) {
             ByteBuffer ith_output=(ByteBuffer)outputMap.get(i);
