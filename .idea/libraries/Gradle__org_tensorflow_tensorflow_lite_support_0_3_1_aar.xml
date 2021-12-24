@@ -1,0 +1,12 @@
+<component name="libraryTable">
+  <library name="Gradle: org.tensorflow:tensorflow-lite-support:0.3.1@aar">
+    <CLASSES>
+      <root url="file://$USER_HOME$/.gradle/caches/transforms-3/0ed608da7e17955565e1ee28e1d0f519/transformed/jetified-tensorflow-lite-support-0.3.1/res" />
+      <root url="file://$USER_HOME$/.gradle/caches/transforms-3/a87fd008f7d6901cd10270e951ad90a3/transformed/jetified-tensorflow-lite-support-0.3.1/res" />
+      <root url="file://$USER_HOME$/.gradle/caches/transforms-3/a87fd008f7d6901cd10270e951ad90a3/transformed/jetified-tensorflow-lite-support-0.3.1/AndroidManifest.xml" />
+      <root url="jar://$USER_HOME$/.gradle/caches/transforms-3/a87fd008f7d6901cd10270e951ad90a3/transformed/jetified-tensorflow-lite-support-0.3.1/jars/classes.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

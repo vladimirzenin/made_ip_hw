@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DesignSurface">
+    <option name="filePathToZoomLevelMap">
+      <map>
+        <entry key="..\:/ML/MADE_2020_Learn/3mobile/MADE-mobile-image-processing-2021-main/week2/src/tensorflow_photos/app/src/main/res/layout/fragment_photos.xml" value="0.2269021739130435" />
+        <entry key="..\:/ML/MADE_2020_Learn/3mobile/MADE-mobile-image-processing-2021-main/week2/src/tensorflow_photos/app/src/main/res/layout/fragment_preferences.xml" value="0.2269021739130435" />
+        <entry key="..\:/ML/MADE_2020_Learn/3mobile/MADE-mobile-image-processing-2021-main/week2/src/tensorflow_photos/app/src/main/res/layout/main_activity.xml" value="0.2269021739130435" />
+        <entry key="..\:/ML/MADE_2020_Learn/3mobile/MADE-mobile-image-processing-2021-main/week2/src/tensorflow_photos/app/src/main/res/layout/spinner_item.xml" value="0.2269021739130435" />
+        <entry key="..\:/ML/MADE_2020_Learn/3mobile/MADE-mobile-image-processing-2021-main/week2/src/tensorflow_photos/app/src/main/res/xml/server_preferences.xml" value="0.3729166666666667" />
+      </map>
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_11" default="true" project-jdk-name="Android Studio default JDK" project-jdk-type="JavaSDK">
+    <output url="file://$PROJECT_DIR$/build/classes" />
+  </component>
+  <component name="ProjectType">
+    <option name="id" value="Android" />
+  </component>
+</project>
