@@ -1,0 +1,3 @@
+age=0
+gender=1
+ethnicity=2
