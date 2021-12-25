@@ -14,6 +14,7 @@ android_binary(
     manifest = "AndroidManifest.xml",
     nocompress_extensions = [
         ".tflite",
+        ".pb",
     ],
     resource_files = glob(["res/**"]),
     # In some platforms we don't have an Android SDK/NDK and this target

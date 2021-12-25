@@ -1,0 +1,7 @@
+Anger=3
+Disgust=3
+Fear=3
+Happiness=3
+Neutral=3
+Sadness=3
+Surprise=3

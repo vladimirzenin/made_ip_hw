@@ -7,21 +7,32 @@ import android.content.res.AssetManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Matrix;
+import android.graphics.Paint;
 import android.graphics.Rect;
 import android.location.Address;
 import android.location.Geocoder;
+import android.media.ExifInterface;
+import android.net.Uri;
 import android.os.SystemClock;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.view.Display;
+
+import com.asav.android.db.ClassifierResult;
 import com.asav.android.db.ImageAnalysisResults;
 import com.asav.android.db.EXIFData;
 import com.asav.android.db.RectFloat;
 import com.asav.android.db.SceneData;
+import com.asav.android.mtcnn.Box;
+import com.asav.android.mtcnn.MTCNNModel;
 
 import java.io.EOFException;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
@@ -39,8 +50,10 @@ public class PhotoProcessor {
     private static final String TAG = "PhotoProcessor";
 
     private ScenesTfLiteClassifier scenesClassifier;
+    private EmotionTfLiteClassifier emotionClassifierTfLite;
+    private MTCNNModel mtcnnFaceDetector=null;
 
-    private ConcurrentHashMap<String, SceneData> scenes = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, ClassifierResult> scenes = new ConcurrentHashMap<>();
     private static final String IMAGE_SCENES_FILENAME = "image_scenes";
 
     private ConcurrentHashMap<String, EXIFData> exifs = new ConcurrentHashMap<>();
@@ -76,9 +89,19 @@ public class PhotoProcessor {
 
     private void loadModels() {
         try {
+            mtcnnFaceDetector = MTCNNModel.Companion.create(context.getAssets());
+        } catch (final Exception e) {
+            Log.e(TAG, "Exception initializing MTCNNModel!"+e);
+        }
+        try {
             scenesClassifier = new ScenesTfLiteClassifier(context);
         } catch (IOException e) {
             Log.e(TAG, "Failed to load ScenesTfClassifier.", e);
+        }
+        try {
+            emotionClassifierTfLite =new EmotionTfLiteClassifier(context);
+        } catch (final Exception e) {
+            Log.e(TAG, "Exception initializing EmotionTfLiteClassifier!", e);
         }
     }
 
@@ -159,14 +182,57 @@ public class PhotoProcessor {
         }
     }
 
-    private synchronized SceneData classifyScenes(Bitmap bmp, StringBuilder text) {
+
+    private synchronized ClassifierResult[] classifyScenes(Bitmap bitmap, String filename, StringBuilder text) {
+
+        Bitmap bmp = bitmap.copy(Bitmap.Config.RGB_565, true);
+
+        Bitmap resizedBitmap=bmp;
+        double minSize=500.0;
+        double scale=Math.min(bmp.getWidth(),bmp.getHeight())/minSize;
+        if(scale>1.0) {
+            resizedBitmap = Bitmap.createScaledBitmap(bmp, (int)(bmp.getWidth()/scale), (int)(bmp.getHeight()/scale), false);
+            bmp=resizedBitmap;
+        }
         long startTime = SystemClock.uptimeMillis();
-        Bitmap scenesBitmap = Bitmap.createScaledBitmap(bmp, scenesClassifier.getImageSizeX(), scenesClassifier.getImageSizeY(), false);
+        Vector<Box> bboxes = mtcnnFaceDetector.detectFaces(resizedBitmap, 20);//(int)(bmp.getWidth()*MIN_FACE_SIZE));
+        Log.i(TAG, "Timecost to run mtcnn: " + Long.toString(SystemClock.uptimeMillis() - startTime));
+
+        Bitmap resultBitmap = bitmap;
+        for (Box box : bboxes) {
+
+            android.graphics.Rect bbox = new android.graphics.Rect(Math.max(0,bmp.getWidth()*box.left() / resizedBitmap.getWidth()),
+                    Math.max(0,bmp.getHeight()* box.top() / resizedBitmap.getHeight()),
+                    bmp.getWidth()* box.right() / resizedBitmap.getWidth(),
+                    bmp.getHeight() * box.bottom() / resizedBitmap.getHeight()
+            );
+
+            if(bbox.width()>0 && bbox.height()>0) {
+                Bitmap faceBitmap = Bitmap.createBitmap(bmp, bbox.left, bbox.top, bbox.width(), bbox.height());
+                resultBitmap = Bitmap.createScaledBitmap(faceBitmap, scenesClassifier.getImageSizeX(), scenesClassifier.getImageSizeY(), false);
+                break; // Обработаем первое вхождение
+            }
+        }
+
+        startTime = SystemClock.uptimeMillis();
+        Bitmap scenesBitmap = Bitmap.createScaledBitmap(resultBitmap, scenesClassifier.getImageSizeX(), scenesClassifier.getImageSizeY(), false);
         SceneData scene = (SceneData) scenesClassifier.classifyFrame(scenesBitmap);
         long sceneTimeCost = SystemClock.uptimeMillis() - startTime;
         Log.i(TAG, "Timecost to run scene model inference: " + Long.toString(sceneTimeCost));
         text.append("Scenes:").append(sceneTimeCost).append(" ms\n");
-        return scene;
+
+        startTime = SystemClock.uptimeMillis();
+        scenesBitmap = Bitmap.createScaledBitmap(resultBitmap, scenesClassifier.getImageSizeX(), scenesClassifier.getImageSizeY(), false);
+        EmotionData scene_emo = (EmotionData) emotionClassifierTfLite.classifyFrame(scenesBitmap);
+        sceneTimeCost = SystemClock.uptimeMillis() - startTime;
+        Log.i(TAG, "Timecost to run scene model inference: " + Long.toString(sceneTimeCost));
+        text.append("Scenes:").append(sceneTimeCost).append(" ms\n");
+
+        ClassifierResult[] scenes = new ClassifierResult[2];
+        scenes[0] = scene;
+        scenes[1] = scene_emo;
+
+        return scenes;
     }
 
     private Bitmap cropBitmap(Bitmap bmp, RectFloat bbox_f){
@@ -191,39 +257,52 @@ public class PhotoProcessor {
         return Bitmap.createBitmap(bmp, x, y, w, h);
     }
 
-    public ImageAnalysisResults getImageAnalysisResultsWOCache(String filename, Bitmap bmp, StringBuilder text) {
-        if (bmp == null)
-            bmp = loadBitmap(filename);
-        SceneData scene = classifyScenes(bmp, text);
-        EXIFData exifData=getEXIFData(filename);
-        ImageAnalysisResults res = new ImageAnalysisResults(filename, scene, exifData);
-        return res;
-    }
+//    public ImageAnalysisResults getImageAnalysisResultsWOCache(String filename, Bitmap bmp, StringBuilder text) {
+//        if (bmp == null)
+//            bmp = loadBitmap(filename);
+//        SceneData scene = classifyScenes(bmp, text);
+//        EXIFData exifData=getEXIFData(filename);
+//        ImageAnalysisResults res = new ImageAnalysisResults(filename, scene, exifData);
+//        return res;
+//    }
 
 
-    public ImageAnalysisResults getImageAnalysisResults(String filename, Bitmap bmp, StringBuilder text,boolean needScene)
+    public ImageAnalysisResults[] getImageAnalysisResults(String filename, Bitmap bmp, StringBuilder text,boolean needScene)
     {
         String key = getKey(filename);
 
+        ClassifierResult[] scene_ans;
         SceneData scene=null;
-        if (!scenes.containsKey(key)) {
-            if(needScene) {
+        EmotionData scene_emo=null;
+        //if (!scenes.containsKey(key)) {
+        //    if(needScene) {
                 if (bmp == null)
                     bmp = loadBitmap(filename);
-                scene = classifyScenes(bmp, text);
+                scene_ans = classifyScenes(bmp, filename, text);
+                //scene = (SceneData)scene_ans[0];
+                //scene_emo = (EmotionData)scene_ans[1];
                 save(context, IMAGE_SCENES_FILENAME, scenes, key, scene);
-            }
-        }
-        else
-            scene=scenes.get(key);
+        //    }
+        //}
+        //else
+        //    scene=scenes.get(key);
+
+        scene = (SceneData)scene_ans[0];
+        scene_emo = (EmotionData)scene_ans[1];
 
         EXIFData exifData=getEXIFData(filename);
         ImageAnalysisResults res = new ImageAnalysisResults(filename, scene,exifData);
-        return res;
+        ImageAnalysisResults res_emo = new ImageAnalysisResults(filename, scene_emo,exifData);
+
+        ImageAnalysisResults[] ans = new ImageAnalysisResults[2];
+        ans[0] = res;
+        ans[1] = res_emo;
+
+        return ans;
     }
 
 
-    public ImageAnalysisResults getImageAnalysisResults(String filename) {
+    public ImageAnalysisResults[] getImageAnalysisResults(String filename) {
         StringBuilder text = new StringBuilder();
         return getImageAnalysisResults(filename,null,text,true);
     }
@@ -307,8 +386,14 @@ public class PhotoProcessor {
     }
 
 
-    public int getHighLevelCategory(String category) {
-        int res = scenesClassifier.getHighLevelCategory(category);
+    public int getHighLevelCategory(String category, int type) {
+        int res = 0;
+        if (type == 0) {
+            res = scenesClassifier.getHighLevelCategory(category);
+        }
+        else if (type == 1) {
+            res = emotionClassifierTfLite.getHighLevelCategory(category);
+        }
         return res;
     }
 
@@ -325,10 +410,11 @@ public class PhotoProcessor {
         //final String selection = null;//MediaStore.Images.Media.BUCKET_ID +" = ?";
         //final String[] selectionArgs = null;//{String.valueOf(path.toLowerCase().hashCode())};
 
-        final String selection = MediaStore.Images.Media.MIME_TYPE + "=? or "
+        final String selection = "("+ MediaStore.Images.Media.MIME_TYPE + "=? or "
                 + MediaStore.Images.Media.MIME_TYPE + "=? or "
-                + MediaStore.Images.Media.MIME_TYPE + "=?";
-        final String[] selectionArgs = {"image/jpeg", "image/png", "image/jpg"};
+                + MediaStore.Images.Media.MIME_TYPE + "=?) and "
+                + MediaStore.Images.Media.RELATIVE_PATH + " LIKE ?";
+        final String[] selectionArgs = {"image/jpeg", "image/png", "image/jpg", "%Camera%"};
 
         photosTaken.clear();
         try {
@@ -372,7 +458,7 @@ public class PhotoProcessor {
     }
 
     private void addDayEvent(List<Map<String, Map<String, Set<String>>>> eventTimePeriod2Files, String category, String timePeriod, Set<String> filenames){
-        int highLevelCategory=getHighLevelCategory(category);
+        int highLevelCategory=getHighLevelCategory(category, 0);
         if(highLevelCategory>=0) {
             Map<String,Map<String,Set<String>>> histo=eventTimePeriod2Files.get(highLevelCategory);
             if(!histo.containsKey(category))

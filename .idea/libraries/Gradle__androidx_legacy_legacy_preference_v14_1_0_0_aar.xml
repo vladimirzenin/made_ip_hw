@@ -2,9 +2,10 @@
   <library name="Gradle: androidx.legacy:legacy-preference-v14:1.0.0@aar">
     <CLASSES>
       <root url="file://$USER_HOME$/.gradle/caches/transforms-3/ce3e67e15eb57906dbf5bfb299cec2ad/transformed/legacy-preference-v14-1.0.0/res" />
-      <root url="jar://$USER_HOME$/.gradle/caches/transforms-3/674225221ecf279f6acb4d2b3a8ead78/transformed/legacy-preference-v14-1.0.0/jars/classes.jar!/" />
-      <root url="file://$USER_HOME$/.gradle/caches/transforms-3/674225221ecf279f6acb4d2b3a8ead78/transformed/legacy-preference-v14-1.0.0/AndroidManifest.xml" />
       <root url="file://$USER_HOME$/.gradle/caches/transforms-3/674225221ecf279f6acb4d2b3a8ead78/transformed/legacy-preference-v14-1.0.0/res" />
+      <root url="jar://$USER_HOME$/.gradle/caches/transforms-3/7708a848deb653174df4b66f7bfe6856/transformed/legacy-preference-v14-1.0.0/jars/classes.jar!/" />
+      <root url="file://$USER_HOME$/.gradle/caches/transforms-3/7708a848deb653174df4b66f7bfe6856/transformed/legacy-preference-v14-1.0.0/AndroidManifest.xml" />
+      <root url="file://$USER_HOME$/.gradle/caches/transforms-3/7708a848deb653174df4b66f7bfe6856/transformed/legacy-preference-v14-1.0.0/res" />
     </CLASSES>
     <JAVADOC />
     <SOURCES>

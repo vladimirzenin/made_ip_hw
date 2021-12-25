@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/tensorflow_photos.iml" filepath="$PROJECT_DIR$/.idea/modules/tensorflow_photos.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/tensorflow_photos.app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/tensorflow_photos.app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/made_ip_hw.iml" filepath="$PROJECT_DIR$/.idea/modules/made_ip_hw.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/made_ip_hw.app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/made_ip_hw.app.iml" />
     </modules>
   </component>
 </project>

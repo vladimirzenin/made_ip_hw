@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
 
 android {
     compileSdkVersion 31
@@ -23,6 +24,12 @@ android {
     }
     aaptOptions {
         noCompress "tflite"
+        noCompress "lite"
+        noCompress "onnx"
+        noCompress "caffemodel"
+        noCompress "h5"
+        noCompress "pt"
+        noCompress "pb"
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -53,6 +60,7 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
     implementation 'androidx.annotation:annotation:1.1.0'
 
+    implementation 'org.tensorflow:tensorflow-android:+'
     //implementation 'org.tensorflow:tensorflow-lite:+'
     //implementation 'org.tensorflow:tensorflow-lite:0.0.0-nightly'
     implementation 'org.tensorflow:tensorflow-lite-gpu:+'
@@ -61,5 +69,7 @@ dependencies {
     implementation 'com.github.PhilJay:MPAndroidChart:v3.0.3'
 
     implementation "com.android.support:exifinterface:+"
+
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
 }
