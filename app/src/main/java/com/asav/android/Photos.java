@@ -246,11 +246,17 @@ public class Photos extends Fragment {
                     p.setColor(Color.BLUE);
                     p.setStrokeWidth(10);
                     c.drawBitmap(bmp, 0, 0, null);
-                    ImageAnalysisResults res = photoProcessor.getImageAnalysisResults(filename, bmp, text, true);
+
+                    ImageAnalysisResults[] res_arr = photoProcessor.getImageAnalysisResults(filename, bmp, text, true);
+                    ImageAnalysisResults res = res_arr[0];
+                    ImageAnalysisResults res_emo = res_arr[1];
+
                     //ImageAnalysisResults res = photoProcessor.getImageAnalysisResultsFromServer(filename, bmp);
                     text.append(res.locations.toString()).append("\n\n");
+                    text.append(res_emo.locations.toString()).append("\n\n");
 
                     text.append(res.scene).append("\n");
+                    text.append(res_emo.scene).append("\n");
 
                     if(getActivity()!=null)
                         getActivity().runOnUiThread(() -> {

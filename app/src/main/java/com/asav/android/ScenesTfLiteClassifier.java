@@ -31,9 +31,8 @@ public class ScenesTfLiteClassifier extends TfLiteClassifier{
 
     private static final boolean useMobileNet=true;
     private static final boolean usePrunnedMobileNet=false;
-    private static final String MODEL_FILE = "age_gender_ethnicity_224_deep-03-0.13-0.97-0.88.tflite";
-
-    private static final String MODEL_FILE_EMO = "emotions_mobilenet_7.tflite";
+    private static final String MODEL_FILE = "age_gender_ethnicity_224_deep-03-0.13-0.97-0.88.tflite"; // Тут качество плохое.
+    //private static final String MODEL_FILE = "age_gender_tf2.pb"; // Модель не загружается. Ругается на сжатие - отключил сжатие в градле, не помогло.
 
     private static final String SCENES_LABELS_FILE =
             "scenes_places.txt";
@@ -51,7 +50,7 @@ public class ScenesTfLiteClassifier extends TfLiteClassifier{
     private ArrayList<String> eventLabels = new ArrayList<String>();
 
     public ScenesTfLiteClassifier(final Context context) throws IOException {
-        super(context,MODEL_FILE,MODEL_FILE_EMO);
+        super(context,MODEL_FILE);
 
         BufferedReader br = null;
         try {
@@ -151,7 +150,7 @@ public class ScenesTfLiteClassifier extends TfLiteClassifier{
         return category2Score;
     }
 
-    protected ClassifierResult getResults(float[][][] outputs, float[][][] outputs_emo) {
+    protected ClassifierResult getResults(float[][][] outputs) {
 
         //age
         final float[] age_features = outputs[0][0];
@@ -276,12 +275,6 @@ public class ScenesTfLiteClassifier extends TfLiteClassifier{
             scene2Score.put("none", (float)1);
         }
 
-//        scene2Score.put("age", Integer.toString((int)age));
-//        scene2Score.put("gender", gender_str);
-//        scene2Score.put("ethnicity", ethnicity);
-        //scene2Score.put("age", (float)age);
-        //scene2Score.put("gender", gender);
-
         if (gender > 0.6) {
             scene2Score.put("female", (float)0);
             scene2Score.put("male", gender);
@@ -290,8 +283,6 @@ public class ScenesTfLiteClassifier extends TfLiteClassifier{
             scene2Score.put("female", gender);
             scene2Score.put("male", (float)0);
         }
-
-        //scene2Score.put("ethnicity", (float)bestInd+1);
 
         if (age < 20.0) {
             scene2Score.put("young", (float)age);
@@ -338,12 +329,6 @@ public class ScenesTfLiteClassifier extends TfLiteClassifier{
             imgData.putFloat((((val >> 8) & 0xFF) / 255.0f - 0.456f) / 0.224f);
             imgData.putFloat((((val) & 0xFF) / 255.0f - 0.406f) / 0.225f);
         }
-    }
-
-    protected void addPixelValue_emo(int val) {
-        imgData_emo.putFloat((val & 0xFF) - 103.939f);
-        imgData_emo.putFloat(((val >> 8) & 0xFF) - 116.779f);
-        imgData_emo.putFloat(((val >> 16) & 0xFF) - 123.68f);
     }
 
     protected TensorOperator getPreprocessNormalizeOp(){

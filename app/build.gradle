@@ -24,6 +24,12 @@ android {
     }
     aaptOptions {
         noCompress "tflite"
+        noCompress "lite"
+        noCompress "onnx"
+        noCompress "caffemodel"
+        noCompress "h5"
+        noCompress "pt"
+        noCompress "pb"
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8

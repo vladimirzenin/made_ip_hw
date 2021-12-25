@@ -24,6 +24,7 @@ import android.widget.Toast;
 
 import com.asav.android.db.EXIFData;
 import com.asav.android.db.ImageAnalysisResults;
+import com.asav.android.db.SceneData;
 import com.asav.android.db.TopCategoriesData;
 import com.asav.android.db.RectFloat;
 
@@ -120,11 +121,14 @@ public class MainActivity extends FragmentActivity {
 
                 if (file.exists()) {
                     long startTime = SystemClock.uptimeMillis();
-                    ImageAnalysisResults res = photoProcessor.getImageAnalysisResults(filename);
+                    ImageAnalysisResults[] res_arr = photoProcessor.getImageAnalysisResults(filename);
+                    ImageAnalysisResults res = res_arr[0];
+                    ImageAnalysisResults res_emo = res_arr[1];
 
                     long endTime = SystemClock.uptimeMillis();
                     Log.d(TAG, "!!Processed: "+ filename+" in background thread:" + Long.toString(endTime - startTime));
                     processRecognitionResults(res);
+                    processRecognitionResults(res_emo);
                     final int progress=currentPhotoIndex+1;
                     runOnUiThread(() -> {
                         if(progressBar!=null) {
@@ -139,8 +143,6 @@ public class MainActivity extends FragmentActivity {
             }
         }
     }
-
-
 
     private void updateCategory(List<Map<String,Map<String, Set<String>>>> histos, int highLevelCategory, String category, String filename){
         if(highLevelCategory>=0) {
@@ -174,10 +176,22 @@ public class MainActivity extends FragmentActivity {
         String location=results.locations.description;
         List<Map<String,Map<String, Set<String>>>> newCategoriesHistograms = deepCopyCategories(categoriesHistograms);
 
-        List<String> scenes = results.scene.getMostReliableCategories();
-        for (String scene : scenes) {
-            updateCategory(newCategoriesHistograms, photoProcessor.getHighLevelCategory(scene), scene, filename);
+        List<String> scenes = new ArrayList<>();
+        if (results.scene instanceof SceneData) {
+            SceneData scene_data = (SceneData) results.scene;
+            scenes = scene_data.getMostReliableCategories();
+            for (String scene : scenes) {
+                updateCategory(newCategoriesHistograms, photoProcessor.getHighLevelCategory(scene, 0), scene, filename);
+            }
         }
+        else if (results.scene instanceof EmotionData) {
+            EmotionData scene_data = (EmotionData) results.scene;
+            scenes = scene_data.getMostReliableCategories();
+            for (String scene : scenes) {
+                updateCategory(newCategoriesHistograms, photoProcessor.getHighLevelCategory(scene, 1), scene, filename);
+            }
+        }
+
         if(location!=null)
             updateCategory(newCategoriesHistograms, newCategoriesHistograms.size() - 1, location, filename);
 

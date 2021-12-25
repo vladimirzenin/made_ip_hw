@@ -19,10 +19,10 @@
         <item>High-level logs</item>
     </string-array>
     <string-array name="category_list">
-        <item>Нажми меня!</item>
-        <item>Indoors</item>
-        <item>Food</item>
-        <item>Transport</item>
+        <item>Пол</item>
+        <item>Возраст</item>
+        <item>Раса</item>
+        <item>Эмоции</item>
         <item>Activity</item>
         <item>Sports</item>
         <item>Music/instruments</item>

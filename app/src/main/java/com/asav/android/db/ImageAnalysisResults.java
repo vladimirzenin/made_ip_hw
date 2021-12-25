@@ -7,17 +7,17 @@ import java.io.Serializable;
  */
 public class ImageAnalysisResults implements Serializable {
     public String filename=null;
-    public SceneData scene=null;
+    public ClassifierResult scene=null;
     public EXIFData locations=null;
 
     public ImageAnalysisResults() {}
 
-    public ImageAnalysisResults(String filename, SceneData scene, EXIFData locations){
+    public ImageAnalysisResults(String filename, ClassifierResult scene, EXIFData locations){
         this.filename=filename;
         this.scene=scene;
         this.locations=locations;
     }
-    public ImageAnalysisResults(SceneData scene){
+    public ImageAnalysisResults(ClassifierResult scene){
         this.scene=scene;
     }
 }
