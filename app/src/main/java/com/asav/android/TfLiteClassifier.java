@@ -43,6 +43,8 @@ public abstract class TfLiteClassifier {
     /** An instance of the driver class to run model inference with Tensorflow Lite. */
     protected Interpreter tflite;
 
+    protected Interpreter tflite_emo;
+
     /* Preallocated buffers for storing image data in. */
     private int[] intValues = null;
     protected ByteBuffer imgData = null;
@@ -53,7 +55,12 @@ public abstract class TfLiteClassifier {
     private MTCNNModel mtcnnFaceDetector=null;
     private static int minFaceSize=40;
 
-    public TfLiteClassifier(final Context context, String model_path) throws IOException {
+    private int imageSizeX_emo=224,imageSizeY_emo=224;
+    protected ByteBuffer imgData_emo = null;
+    private float[][][] outputs_emo;
+    Map<Integer, Object> outputMap_emo = new HashMap<>();
+
+    public TfLiteClassifier(final Context context, String model_path, String model_path_emo) throws IOException {
 
         try {
             mtcnnFaceDetector =MTCNNModel.Companion.create(context.getAssets());
@@ -81,6 +88,14 @@ public abstract class TfLiteClassifier {
         imgData =ByteBuffer.allocateDirect(imageSizeX*imageSizeY* inputShape[3]*getNumBytesPerChannel());
         imgData.order(ByteOrder.nativeOrder());
 
+        Interpreter.Options options_emo = (new Interpreter.Options()).setNumThreads(4);//.addDelegate(delegate);
+        if (hasGPU) {
+            org.tensorflow.lite.gpu.GpuDelegate.Options opt=new org.tensorflow.lite.gpu.GpuDelegate.Options();
+            opt.setInferencePreference(org.tensorflow.lite.gpu.GpuDelegate.Options.INFERENCE_PREFERENCE_SUSTAINED_SPEED);
+            org.tensorflow.lite.gpu.GpuDelegate delegate = new org.tensorflow.lite.gpu.GpuDelegate(opt);
+            options_emo.addDelegate(delegate);
+        }
+
         int outputCount=tflite.getOutputTensorCount();
         outputs=new float[outputCount][1][];
         for(int i = 0; i< outputCount; ++i) {
@@ -92,15 +107,36 @@ public abstract class TfLiteClassifier {
             ith_output.order(ByteOrder.nativeOrder());
             outputMap.put(i, ith_output);
         }
+
+        MappedByteBuffer tfliteModel_emo= FileUtil.loadMappedFile(context,model_path_emo);
+        tflite_emo = new Interpreter(tfliteModel_emo,options_emo);
+        tflite_emo.allocateTensors();
+        inputShape=tflite_emo.getInputTensor(0).shape();
+        imageSizeX_emo=inputShape[1];
+        imageSizeY_emo=inputShape[2];
+        intValues = new int[imageSizeX_emo * imageSizeY_emo];
+        imgData_emo =ByteBuffer.allocateDirect(imageSizeX_emo*imageSizeY_emo* inputShape[3]*getNumBytesPerChannel());
+        imgData_emo.order(ByteOrder.nativeOrder());
+
+        outputCount=tflite_emo.getOutputTensorCount();
+        outputs_emo=new float[outputCount][1][];
+        for(int i = 0; i< outputCount; ++i) {
+            int[] shape=tflite_emo.getOutputTensor(i).shape();
+            int numOFFeatures = shape[1];
+            Log.i(TAG, "Read output layer size is " + numOFFeatures);
+            outputs_emo[i][0] = new float[numOFFeatures];
+            ByteBuffer ith_output = ByteBuffer.allocateDirect( numOFFeatures* getNumBytesPerChannel());  // Float tensor, shape 3x2x4
+            ith_output.order(ByteOrder.nativeOrder());
+            outputMap_emo.put(i, ith_output);
+        }
     }
     protected abstract void addPixelValue(int val);
+    protected abstract void addPixelValue_emo(int val);
 
 
     /** Classifies a frame from the preview stream. */
     public ClassifierResult classifyFrame(Bitmap bmp) {
         Object[] inputs={null};
-
-        //Bitmap bmp = bitmap;
 
         Bitmap resizedBitmap=bmp;
         double minSize=600.0;
@@ -112,26 +148,6 @@ public abstract class TfLiteClassifier {
         long startTime = SystemClock.uptimeMillis();
         Vector<Box> bboxes = mtcnnFaceDetector.detectFaces(resizedBitmap, minFaceSize);//(int)(bmp.getWidth()*MIN_FACE_SIZE));
         Log.i(TAG, "Timecost to run mtcnn: " + Long.toString(SystemClock.uptimeMillis() - startTime));
-
-//        Bitmap tempBmp = Bitmap.createBitmap(bmp.getWidth(), bmp.getHeight(), Bitmap.Config.ARGB_8888);
-//        Canvas c = new Canvas(tempBmp);
-//        Paint p = new Paint();
-//        p.setStyle(Paint.Style.STROKE);
-//        p.setAntiAlias(true);
-//        p.setFilterBitmap(true);
-//        p.setDither(true);
-//        p.setColor(Color.BLUE);
-//        p.setStrokeWidth(5);
-//
-//        Paint p_text = new Paint();
-//        p_text.setColor(Color.WHITE);
-//        p_text.setStyle(Paint.Style.FILL);
-//        p_text.setColor(Color.GREEN);
-//        p_text.setTextSize(24);
-//
-//        c.drawBitmap(bmp, 0, 0, null);
-
-        //for (Box box : bboxes) {
 
         for (Box box : bboxes) {
 
@@ -152,16 +168,18 @@ public abstract class TfLiteClassifier {
             return null;
         }
         imgData.rewind();
+        imgData_emo.rewind();
+
         // Convert the image to floating point.
         int pixel = 0;
         for (int i = 0; i < imageSizeX; ++i) {
             for (int j = 0; j < imageSizeY; ++j) {
                 final int val = intValues[pixel++];
                 addPixelValue(val);
+                addPixelValue_emo(val);
             }
         }
         inputs[0] = imgData;
-        //long startTime = SystemClock.uptimeMillis();
         tflite.runForMultipleInputsOutputs(inputs, outputMap);
         for(int i = 0; i< outputs.length; ++i) {
             ByteBuffer ith_output=(ByteBuffer)outputMap.get(i);
@@ -175,14 +193,21 @@ public abstract class TfLiteClassifier {
         long endTime = SystemClock.uptimeMillis();
         Log.i(TAG, "tf lite timecost to run model inference: " + Long.toString(endTime - startTime));
 
-        return getResults(outputs);
+        try {
+            inputs[0] = imgData_emo;
+            tflite_emo.runForMultipleInputsOutputs(inputs, outputMap_emo);
+        } catch (Exception e) {
+            Log.e(TAG, "While get emo exception thrown: ", e);
+        }
+
+        return getResults(outputs, outputs_emo);
     }
 
     public void close() {
         tflite.close();
     }
 
-    protected abstract ClassifierResult getResults(float[][][] outputs);
+    protected abstract ClassifierResult getResults(float[][][] outputs, float[][][] outputs_emo);
     public int getImageSizeX() {
         return imageSizeX;
     }

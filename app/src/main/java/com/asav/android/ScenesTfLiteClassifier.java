@@ -33,6 +33,8 @@ public class ScenesTfLiteClassifier extends TfLiteClassifier{
     private static final boolean usePrunnedMobileNet=false;
     private static final String MODEL_FILE = "age_gender_ethnicity_224_deep-03-0.13-0.97-0.88.tflite";
 
+    private static final String MODEL_FILE_EMO = "emotions_mobilenet_7.tflite";
+
     private static final String SCENES_LABELS_FILE =
             "scenes_places.txt";
 //    private static final String FILTERED_INDICES_FILE =
@@ -49,7 +51,7 @@ public class ScenesTfLiteClassifier extends TfLiteClassifier{
     private ArrayList<String> eventLabels = new ArrayList<String>();
 
     public ScenesTfLiteClassifier(final Context context) throws IOException {
-        super(context,MODEL_FILE);
+        super(context,MODEL_FILE,MODEL_FILE_EMO);
 
         BufferedReader br = null;
         try {
@@ -148,17 +150,8 @@ public class ScenesTfLiteClassifier extends TfLiteClassifier{
         }
         return category2Score;
     }
-//    protected ClassifierResult getResults(float[][][] outputs) {
-//        TreeMap<String,Float> scene2Score=getCategory2Score(outputs[0][0],sceneLabels,true);
-//        TreeMap<String,Float> event2Score=null;
-//        if(usePrunnedMobileNet)
-//            event2Score=new TreeMap<>();
-//        else
-//            event2Score=getCategory2Score(outputs[1][0],eventLabels,false);
-//        SceneData res=new SceneData(sceneLabels2Index,scene2Score,eventLabels2Index,event2Score);
-//        return res;
-//    }
-    protected ClassifierResult getResults(float[][][] outputs) {
+
+    protected ClassifierResult getResults(float[][][] outputs, float[][][] outputs_emo) {
 
         //age
         final float[] age_features = outputs[0][0];
@@ -346,6 +339,13 @@ public class ScenesTfLiteClassifier extends TfLiteClassifier{
             imgData.putFloat((((val) & 0xFF) / 255.0f - 0.406f) / 0.225f);
         }
     }
+
+    protected void addPixelValue_emo(int val) {
+        imgData_emo.putFloat((val & 0xFF) - 103.939f);
+        imgData_emo.putFloat(((val >> 8) & 0xFF) - 116.779f);
+        imgData_emo.putFloat(((val >> 16) & 0xFF) - 123.68f);
+    }
+
     protected TensorOperator getPreprocessNormalizeOp(){
         if(useMobileNet) {
             //float std=127.5f; //mobilenet v1
